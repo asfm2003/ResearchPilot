@@ -4,8 +4,12 @@ The prompt forces the model to (a) answer only from provided evidence,
 (b) tag every claim with [n] pointing at a source chunk, and
 (c) abstain if evidence is insufficient.
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 from google import genai
 from google.genai import types
+
 
 MODEL = "gemini-3.6-flash"
 

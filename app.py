@@ -13,11 +13,13 @@ from core.vector_store import VectorStore
 from core.bm25_index import BM25Index
 from core.retriever import HybridRetriever
 from core.generator import answer_question
+from core.reranker import Reranker
 
 app = FastAPI(title="ResearchPilot")
 vs = VectorStore()
 bm25 = BM25Index()
 ALL_CHUNKS: list[dict] = []
+reranker = Reranker()
 
 
 class Query(BaseModel):
@@ -60,7 +62,8 @@ async def query(q: Query):
     if vs.count() == 0:
         return {"answer": "No papers indexed yet. Upload some first.", "sources": []}
     retriever = HybridRetriever(vs, bm25)
-    top_chunks = retriever.retrieve(q.question, top_k=q.top_k)
+    candidates = retriever.retrieve(q.question, top_k=20)
+    top_chunks = reranker.rerank(q.question, candidates, top_k=q.top_k)
     return answer_question(q.question, top_chunks)
 
 
