@@ -44,7 +44,7 @@ def answer_question(question: str, chunks: list[dict]) -> dict:
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=800,
+            max_output_tokens=1600,
         ),
     )
     answer_text = response.text
