@@ -59,5 +59,53 @@
     {
         "question": "Capital of France?",
         "expected_chunk_ids": []
+    },
+    {
+        "question": "how many participants in the alzheimer speech dataset",
+        "expected_chunk_ids": [
+            "RASAD__Real_Time_Alzheimer_s_Speech_Analysis_Diagnosis (4)-p4-c22"
+        ]
+    },
+    {
+        "question": "ensemble model outperforming acoustic only features",
+        "expected_chunk_ids": [
+            "RASAD__Real_Time_Alzheimer_s_Speech_Analysis_Diagnosis (4)-p6-c27"
+        ]
+    },
+    {
+        "question": "transformer attention mechanism regime detection",
+        "expected_chunk_ids": [
+            "icl-p21-c65"
+        ]
+    },
+    {
+        "question": "experimental results in-context learning",
+        "expected_chunk_ids": [
+            "icl-p2-c6",
+            "icl-p13-c43",
+            "icl-p2-c4"
+        ]
+    },
+    {
+        "question": "what evaluation metrics do the cardiac paper uses",
+        "expected_chunk_ids": [
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p6-c28",
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p8-c34"
+        ]
+    },
+    {
+        "question": "which papers use time series data",
+        "expected_chunk_ids": [
+            "icl-p12-c40",
+            "sixl-p2-c6"
+        ]
+    },
+    {
+        "question": "what is the FDA approval status of this cardiac device",
+        "expected_chunk_ids": []
+    },
+    {
+        "question": "how does this compare to GPT-4's in-context learning",
+        "expected_chunk_ids": []
     }
 ]

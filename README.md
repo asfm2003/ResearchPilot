@@ -68,31 +68,36 @@ streamlit run streamlit_app.py  # UI at localhost:8501
 
 ## Evaluation
 
-A 10-question benchmark (8 retrieval questions with hand-verified
-ground-truth chunk IDs, 2 abstention questions) was run across three
+18-question benchmark (14 retrieval, 4 abstention) across three
 retrieval configurations:
 
 | Method             | Recall@6 |
 |--------------------|----------|
-| Dense only         | 87.5%    |
-| Hybrid (RRF)       | 75.0%    |
-| Hybrid + Reranked  | 75.0%    |
+| Dense only         | 92.9%    |
+| Hybrid (RRF)       | 78.6%    |
+| Hybrid + Reranked  | 78.6%    |
 
-Abstention accuracy (correctly refusing out-of-scope questions): **100%**.
+Abstention accuracy: 100% (4/4), including two adversarial cases
+designed to be plausible-sounding but genuinely unanswerable from
+the corpus (e.g. asking about FDA approval status when no paper
+discusses regulatory status).
 
-**Finding:** naive RRF underperformed dense-only search on this small
-corpus. Root-caused via direct BM25 score inspection: for one query,
-BM25 ranked an irrelevant chunk from an unrelated paper above the
-correct chunk, purely on generic keyword overlap ("future",
-"improvements"). Since RRF fuses by rank position only, with no
-confidence weighting, that one high BM25 rank was enough to displace
-the correct chunk from the fused top-6 before the reranker ever saw
-it. This is a documented limitation of unweighted RRF, not a defect
-in this implementation — production systems typically address it
-with confidence-weighted fusion or a wider pre-rerank candidate pool.
-At n=8 this is a directional finding, not a statistically robust one;
-a larger benchmark (50+ questions) would be needed to confirm the
-effect holds at scale.
+**Finding:** dense-only retrieval outperformed both hybrid variants
+on this corpus. Root cause, confirmed across multiple failing
+questions: RRF can rank a chunk that scores moderately in *both*
+dense and BM25 above a chunk that scores excellently in one source
+but is entirely absent from the other's candidate pool. Weighting
+dense higher (0.7/0.3) fixed one specific failure mode (a noisy
+BM25 false-positive outranking a correct dense hit) but did not
+address this second, more fundamental one. At n=14 this is a
+consistent pattern, not noise - but the corpus is small (~190
+chunks across 5 papers); RRF's documented advantages typically
+emerge at much larger scale, where BM25's exact-term matching
+becomes essential for precision (e.g. distinguishing "TabPFN" from
+semantically-similar-but-wrong terms) rather than a source of noise.
+For this project's scale, dense-only or a higher pre-rerank
+candidate pool (top-50+ instead of top-20) would likely outperform
+naive RRF - a concrete next experiment, not yet run.
 
 Run the eval yourself:
 ```bash
