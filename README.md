@@ -1,77 +1,138 @@
-# ResearchPilot — 4-Day Build Plan
+# ResearchPilot
 
-Scope for 4 days: **M1+M2+M3 fully, M4 fully, thin slice of M5/M6** —
-a real hybrid-RAG research assistant with citations, not a toy.
-Skipped for now (add later): reranker model, structured extraction,
-literature graph, Ragas eval, Docker. The architecture is already
-laid out so you can bolt those on afterward.
+**An evidence-grounded RAG platform for scientific literature analysis.**
+Ask questions across your research papers and get answers with inline
+citations pointing to the exact paper, section, and page — grounded
+entirely in the provided evidence, with correct refusal when the
+evidence isn't there.
 
-## Setup (do this first, ~15 min)
+Built by Abdullah Sajid.
+
+---
+
+## What it does
+
+- Upload research PDFs (via Streamlit UI or FastAPI)
+- Ask natural-language questions: "What datasets were used?",
+  "Compare the methodologies in these papers", "What are the
+  limitations discussed?"
+- Get answers with `[n]`-style citations mapped to real
+  paper/section/page metadata
+- Correctly abstains ("I couldn't find sufficient evidence...") on
+  out-of-scope questions instead of hallucinating from general
+  knowledge
+
+## Architecture
+
+```
+PDF → pymupdf4llm (page-aware markdown extraction)
+    → structure-aware chunker (page + section tagged)
+    → MiniLM embeddings (sentence-transformers, local, free)
+    → Chroma (persistent local vector store)
+    → rank_bm25 (lexical/keyword index)
+    → Reciprocal Rank Fusion (hand-implemented, RRF_K=60)
+    → cross-encoder reranker (ms-marco-MiniLM-L-6-v2)
+    → Gemini (gemini-3.6-flash) with citation-forcing system prompt
+    → answer with [n] citations + abstention on insufficient evidence
+    → served via FastAPI (/papers/upload, /query, /papers)
+      and a Streamlit UI (upload + ask, one page)
+```
+
+## Setup
+
 ```bash
-cd research_pilot
-python3 -m venv venv && source venv/bin/activate
+git clone https://github.com/asfm2003/ResearchPilot.git
+cd ResearchPilot
+python -m venv venv
+venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...
-mkdir -p data/papers
-# drop 5-10 PDFs into data/papers/
 ```
 
-## Day 1 — Ingestion + chunking (M1+M2)
-Files: `ingestion/pdf_parser.py`, `ingestion/chunker.py`
-- Run `python ingestion/pdf_parser.py data/papers/<one>.pdf` — confirm
-  title + page count extract correctly.
-- Read `chunker.py` — understand why we chunk **within page boundaries**
-  and tag `paper_id/page/section` on every chunk. This metadata is what
-  makes citations possible later; don't skip understanding it.
-- **Your task:** tune `CHUNK_SIZE_CHARS` — print a few chunks, check
-  they're not cutting sentences mid-word in weird spots.
+Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com),
+then create a `.env` file in the project root:
+```
+GOOGLE_API_KEY=your_key_here
+```
 
-## Day 2 — Embeddings + vector search + first answer (M3, half of M4)
-Files: `core/vector_store.py`, `pipeline.py`, `cli.py`
+Drop PDFs into `data/papers/`, then:
 ```bash
-python pipeline.py                       # ingest + index everything
-python cli.py "What datasets were used?"
+python pipeline.py              # ingest + index everything
+python cli.py "your question"   # terminal Q&A
 ```
-- You now have working semantic RAG with page-level citations.
-- **Your task:** ask 5 real questions about your own papers, read the
-  `[n]` citations against the actual PDF pages — check the model isn't
-  citing the wrong page. Fix chunking if it is.
 
-## Day 3 — Hybrid retrieval + grounded generation (rest of M4, M5-lite)
-Files: `core/bm25_index.py`, `core/retriever.py`, `core/generator.py`
-- These are already wired into `cli.py`/`app.py`. Read `retriever.py`
-  closely — this is the RRF fusion math from the roadmap doc, implemented
-  from scratch (no black-box library).
-- **Your task:** compare answers with `HybridRetriever` vs dense-only
-  (`vs.search()` alone) on a query with an exact model/dataset name like
-  "ADReSSo" or "SPECTER2". Hybrid should win — that's the point of BM25.
-- Also test the abstention behavior: ask something not in your papers,
-  confirm it says it can't find evidence instead of hallucinating.
-
-## Day 4 — API + polish + writeup (M7-lite)
-Files: `app.py`
+Or run the full apps:
 ```bash
-uvicorn app:app --reload
-# POST /papers/upload  (multipart file)
-# POST /query          {"question": "..."}
-# GET  /papers
+uvicorn app:app --reload        # API at localhost:8000/docs
+streamlit run streamlit_app.py  # UI at localhost:8501
 ```
-- Test all three endpoints with `curl` or the FastAPI `/docs` page.
-- Write your CV bullet using the template in the roadmap doc (Section
-  "What I want the final CV project to look like").
-- Push to GitHub with this README as-is — it doubles as your project log.
 
-## What to build next (post-4-days, in order)
-1. Cross-encoder reranker (`sentence-transformers` CrossEncoder,
-   `cross-encoder/ms-marco-MiniLM-L-6-v2` — drop-in, no new infra)
-2. Structured extraction pass (datasets/methods/metrics as JSON per paper)
-3. Small eval set (20 Q&A pairs) + Recall@K, then Ragas
-4. Semantic Scholar / OpenAlex for literature discovery beyond uploads
+## Evaluation
 
-## Architecture (current state)
+A 10-question benchmark (8 retrieval questions with hand-verified
+ground-truth chunk IDs, 2 abstention questions) was run across three
+retrieval configurations:
+
+| Method             | Recall@6 |
+|--------------------|----------|
+| Dense only         | 87.5%    |
+| Hybrid (RRF)       | 75.0%    |
+| Hybrid + Reranked  | 75.0%    |
+
+Abstention accuracy (correctly refusing out-of-scope questions): **100%**.
+
+**Finding:** naive RRF underperformed dense-only search on this small
+corpus. Root-caused via direct BM25 score inspection: for one query,
+BM25 ranked an irrelevant chunk from an unrelated paper above the
+correct chunk, purely on generic keyword overlap ("future",
+"improvements"). Since RRF fuses by rank position only, with no
+confidence weighting, that one high BM25 rank was enough to displace
+the correct chunk from the fused top-6 before the reranker ever saw
+it. This is a documented limitation of unweighted RRF, not a defect
+in this implementation — production systems typically address it
+with confidence-weighted fusion or a wider pre-rerank candidate pool.
+At n=8 this is a directional finding, not a statistically robust one;
+a larger benchmark (50+ questions) would be needed to confirm the
+effect holds at scale.
+
+Run the eval yourself:
+```bash
+python -m eval.run_eval
 ```
-PDF → pymupdf4llm → page-aware chunks → MiniLM embeddings → Chroma
-                                       ↘ BM25 (rank_bm25) ↗
-                                    RRF fusion → top-k → Claude
-                                    → cited, grounded answer
-```
+
+## Known limitations (v2)
+
+- **Chunking is character-based, not sentence-aware** — chunks can
+  start/end mid-sentence. Acceptable for LLM consumption, not ideal
+  for human readability of intermediate output.
+- **Section detection is a keyword heuristic** checking only the first
+  120 characters of a chunk — mid-page chunks often default to "Body"
+  rather than their true section.
+- **Title extraction** is a simple heuristic (first substantial line
+  of page 1) and can merge title + author lines on some PDF layouts.
+- **RRF has no confidence weighting** — see Evaluation finding above.
+- Filenames become `paper_id`s directly, so inconsistent filenames
+  (e.g. browser-appended ` (1)`, ` (2)` on duplicate downloads)
+  propagate into chunk IDs and citations.
+
+## Project history
+
+- **v1**: PDF parsing → structure-aware chunking → dense embeddings
+  (Chroma) → BM25 → hand-implemented RRF fusion → Gemini generation
+  with citation-forcing prompt and abstention → FastAPI wrapper
+- **v2**: cross-encoder reranking, Streamlit UI, 10-question Recall@K
+  evaluation harness with per-question diagnostics
+
+## Roadmap (not yet built)
+
+1. Structured extraction (datasets/methods/metrics as JSON per paper)
+2. Weighted/confidence-aware RRF, or larger pre-rerank candidate pool
+3. Semantic Scholar / OpenAlex integration for literature discovery
+   beyond uploaded PDFs
+4. Larger eval set (50+ questions) with Ragas metrics (faithfulness,
+   context precision/recall)
+5. Docker + deployment
+
+## Stack
+
+Python · FastAPI · Streamlit · Chroma · sentence-transformers ·
+rank_bm25 · Gemini (`gemini-3.6-flash`) · pymupdf4llm
