@@ -1,0 +1,63 @@
+[
+    {
+        "question": "What dataset was used in the water quality prediction paper?",
+        "expected_chunk_ids": [
+            "sixl-p2-c7"
+        ]
+    },
+    {
+        "question": "How does the paper's method handle cross-variable learning and self-imputation?",
+        "expected_chunk_ids": [
+            "sixl-p4-c14",
+            "sixl-p2-c5"
+        ]
+    },
+    {
+        "question": "What evaluation metrics were used?",
+        "expected_chunk_ids": [
+            "sixl-p3-c11"
+        ]
+    },
+    {
+        "question": "ECG PPG fusion architecture cardiac risk?",
+        "expected_chunk_ids": [
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p8-c36",
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p7-c31"
+        ]
+    },
+    {
+        "question": "What future improvements does the cardiac risk paper suggest for deployment?",
+        "expected_chunk_ids": [
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p10-c42"
+        ]
+    },
+    {
+        "question": "What is in-context learning regime change?",
+        "expected_chunk_ids": [
+            "icl-p6-c21",
+            "icl-p2-c6"
+        ]
+    },
+    {
+        "question": "Explain real-time Alzheimer's diagnosis pipeline methodology of this paper?",
+        "expected_chunk_ids": [
+            "RASAD__Real_Time_Alzheimer_s_Speech_Analysis_Diagnosis (4)-p8-c32",
+            "RASAD__Real_Time_Alzheimer_s_Speech_Analysis_Diagnosis (4)-p2-c6"
+        ]
+    },
+    {
+        "question": "Compare architecture of Cardiac Arrest Pipeline with Alzheimer's diagnosis pipeline?",
+        "expected_chunk_ids": [
+            "RASAD__Real_Time_Alzheimer_s_Speech_Analysis_Diagnosis (4)-p8-c32",
+            "ICDM_ConferenceSubmission-AbdullahSajid-V2-p2-c6"
+        ]
+    },
+    {
+        "question": "Boiling Point of Nitrogen?",
+        "expected_chunk_ids": []
+    },
+    {
+        "question": "Capital of France?",
+        "expected_chunk_ids": []
+    }
+]
