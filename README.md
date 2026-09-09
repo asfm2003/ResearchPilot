@@ -114,7 +114,6 @@ python -m eval.run_eval
   rather than their true section.
 - **Title extraction** is a simple heuristic (first substantial line
   of page 1) and can merge title + author lines on some PDF layouts.
-- **RRF has no confidence weighting** — see Evaluation finding above.
 - Filenames become `paper_id`s directly, so inconsistent filenames
   (e.g. browser-appended ` (1)`, ` (2)` on duplicate downloads)
   propagate into chunk IDs and citations.
